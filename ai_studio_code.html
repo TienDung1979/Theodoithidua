@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ClassManager Pro - Quản lý Lớp học Thông minh</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #f0f4f8; }
+        .bg-ceramic { background-color: #f4f7f6; }
+        .text-ceramic-dark { color: #2c4c4c; }
+        .bg-pastel-blue { background-color: #e0f2fe; }
+        .sidebar-active { background-color: #334155; color: white; }
+        .hidden-mode { display: none !important; }
+    </style>
+</head>
+<body class="text-slate-800">
+
+    <div class="flex flex-col md:flex-row min-h-screen">
+        <!-- Sidebar -->
+        <aside class="w-full md:w-64 bg-slate-800 text-slate-300 flex-shrink-0">
+            <div class="p-6 text-center border-b border-slate-700">
+                <h1 class="text-2xl font-bold text-white">ClassManager</h1>
+                <p class="text-xs mt-1 text-slate-400">Hệ thống Quản lý Chủ nhiệm</p>
+                <div id="roleBadge" class="mt-2 inline-block px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider"></div>
+            </div>
+            <nav class="mt-6">
+                <a href="#" onclick="switchTab('dashboard')" class="nav-item flex items-center px-6 py-3 hover:bg-slate-700 transition" id="tab-dashboard">
+                    <i class="fas fa-chart-line w-6"></i> Dashboard
+                </a>
+                <a href="#" onclick="switchTab('students')" class="nav-item flex items-center px-6 py-3 hover:bg-slate-700 transition" id="tab-students">
+                    <i class="fas fa-users w-6"></i> Danh sách lớp
+                </a>
+                <a href="#" onclick="switchTab('attendance')" class="nav-item flex items-center px-6 py-3 hover:bg-slate-700 transition admin-only" id="tab-attendance">
+                    <i class="fas fa-calendar-check w-6"></i> Điểm danh
+                </a>
+                <a href="#" onclick="switchTab('competition')" class="nav-item flex items-center px-6 py-3 hover:bg-slate-700 transition admin-only" id="tab-competition">
+                    <i class="fas fa-trophy w-6"></i> Chấm điểm Thi đua
+                </a>
+                <div class="p-6 mt-10">
+                    <button id="authBtn" class="w-full py-2 px-4 rounded bg-teal-600 hover:bg-teal-700 text-white font-medium transition text-sm">
+                        Đăng nhập Giáo viên
+                    </button>
+                </div>
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="flex-1 p-4 md:p-8 overflow-y-auto">
+            
+            <!-- Dashboard Section -->
+            <section id="content-dashboard" class="tab-content">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                    <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-teal-500">
+                        <h3 class="text-slate-500 text-sm font-semibold uppercase">Tổng số học sinh</h3>
+                        <p class="text-3xl font-bold text-slate-800" id="stat-total-students">0</p>
+                    </div>
+                    <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-orange-400">
+                        <h3 class="text-slate-500 text-sm font-semibold uppercase">Vắng hôm nay</h3>
+                        <p class="text-3xl font-bold text-slate-800" id="stat-absent-today">0</p>
+                    </div>
+                    <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-blue-500">
+                        <h3 class="text-slate-500 text-sm font-semibold uppercase">Tổ dẫn đầu</h3>
+                        <p class="text-3xl font-bold text-slate-800" id="stat-top-group">-</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <div class="bg-white p-6 rounded-xl shadow-sm">
+                        <h3 class="font-bold text-lg mb-4 text-ceramic-dark"><i class="fas fa-medal text-yellow-500 mr-2"></i>Bảng xếp hạng Tổ</h3>
+                        <div id="group-ranking-list" class="space-y-4">
+                            <!-- Ranking items -->
+                        </div>
+                    </div>
+                    <div class="bg-white p-6 rounded-xl shadow-sm">
+                        <h3 class="font-bold text-lg mb-4 text-ceramic-dark"><i class="fas fa-star text-blue-500 mr-2"></i>Gương mặt tiêu biểu</h3>
+                        <div id="student-ranking-list" class="space-y-4">
+                            <!-- Student items -->
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Student List Section -->
+            <section id="content-students" class="tab-content hidden">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-bold text-ceramic-dark">Quản lý Danh sách lớp</h2>
+                    <button onclick="openStudentModal()" class="admin-only bg-teal-600 text-white px-4 py-2 rounded-lg hover:bg-teal-700">
+                        <i class="fas fa-plus mr-2"></i>Thêm học sinh
+                    </button>
+                </div>
+                <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+                    <div class="p-4 bg-ceramic border-b flex flex-wrap gap-4">
+                        <input type="text" id="searchStudent" placeholder="Tìm kiếm tên học sinh..." class="px-4 py-2 border rounded-lg focus:ring-2 focus:ring-teal-400 outline-none w-full md:w-64">
+                        <select id="filterGroup" class="px-4 py-2 border rounded-lg focus:ring-2 focus:ring-teal-400 outline-none">
+                            <option value="">Tất cả Tổ</option>
+                            <option value="1">Tổ 1</option>
+                            <option value="2">Tổ 2</option>
+                            <option value="3">Tổ 3</option>
+                            <option value="4">Tổ 4</option>
+                        </select>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left">
+                            <thead class="bg-slate-50 text-slate-600 uppercase text-xs font-bold">
+                                <tr>
+                                    <th class="px-6 py-4">Mã HS</th>
+                                    <th class="px-6 py-4">Họ và Tên</th>
+                                    <th class="px-6 py-4">Tổ</th>
+                                    <th class="px-6 py-4">Chức vụ</th>
+                                    <th class="px-6 py-4">Phụ huynh</th>
+                                    <th class="px-6 py-4 text-center">Thao tác</th>
+                                </tr>
+                            </thead>
+                            <tbody id="student-table-body" class="divide-y divide-slate-100">
+                                <!-- Student rows -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Attendance Section -->
+            <section id="content-attendance" class="tab-content hidden">
+                <div class="bg-white p-6 rounded-xl shadow-sm mb-6">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-2xl font-bold text-ceramic-dark">Điểm danh ngày: <span id="current-date">--/--/----</span></h2>
+                        <button onclick="saveAttendance()" class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700">Lưu điểm danh</button>
+                    </div>
+                    <div id="attendance-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <!-- Attendance cards -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- Competition Section -->
+            <section id="content-competition" class="tab-content hidden">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-bold text-ceramic-dark">Chấm điểm Thi đua Tổ</h2>
+                    <select id="comp-group-select" onchange="renderCompetitionList()" class="px-4 py-2 border rounded-lg">
+                        <option value="1">Tổ 1</option>
+                        <option value="2">Tổ 2</option>
+                        <option value="3">Tổ 3</option>
+                        <option value="4">Tổ 4</option>
+                    </select>
+                </div>
+                <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+                    <table class="w-full text-left text-sm">
+                        <thead class="bg-slate-50">
+                            <tr>
+                                <th class="px-6 py-4">Học sinh</th>
+                                <th class="px-6 py-4">Điểm hiện tại</th>
+                                <th class="px-6 py-4 text-center">Điểm cộng (+)</th>
+                                <th class="px-6 py-4 text-center">Điểm trừ (-)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="competition-table-body" class="divide-y divide-slate-100">
+                            <!-- Comp rows -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Modal: Student Form -->
+    <div id="studentModal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-xl w-full max-w-lg p-6">
+            <h3 id="modalTitle" class="text-xl font-bold mb-4">Thêm học sinh mới</h3>
+            <form id="studentForm" class="space-y-4">
+                <input type="hidden" id="edit-id">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Mã HS</label>
+                        <input type="text" id="form-id" required class="w-full px-3 py-2 border rounded">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Họ tên</label>
+                        <input type="text" id="form-name" required class="w-full px-3 py-2 border rounded">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Ngày sinh</label>
+                        <input type="date" id="form-dob" required class="w-full px-3 py-2 border rounded">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Giới tính</label>
+                        <select id="form-gender" class="w-full px-3 py-2 border rounded">
+                            <option value="Nam">Nam</option>
+                            <option value="Nữ">Nữ</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Tổ</label>
+                        <select id="form-group" class="w-full px-3 py-2 border rounded">
+                            <option value="1">Tổ 1</option>
+                            <option value="2">Tổ 2</option>
+                            <option value="3">Tổ 3</option>
+                            <option value="4">Tổ 4</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Chức vụ</label>
+                        <select id="form-role" class="w-full px-3 py-2 border rounded">
+                            <option value="Thành viên">Thành viên</option>
+                            <option value="Tổ trưởng">Tổ trưởng</option>
+                        </select>
+                    </div>
+                    <div class="col-span-2 border-t pt-4">
+                        <label class="block text-sm font-medium mb-1">Tên phụ huynh</label>
+                        <input type="text" id="form-pname" required class="w-full px-3 py-2 border rounded">
+                    </div>
+                    <div class="col-span-2">
+                        <label class="block text-sm font-medium mb-1">SĐT liên hệ</label>
+                        <input type="text" id="form-pphone" required class="w-full px-3 py-2 border rounded">
+                    </div>
+                </div>
+                <div class="flex justify-end gap-3 mt-6">
+                    <button type="button" onclick="closeStudentModal()" class="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded">Hủy</button>
+                    <button type="submit" class="px-4 py-2 bg-teal-600 text-white rounded hover:bg-teal-700">Lưu dữ liệu</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Report / Comments -->
+    <div id="reportModal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-xl w-full max-w-2xl p-8 relative">
+            <button onclick="closeReportModal()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600"><i class="fas fa-times text-xl"></i></button>
+            <div id="report-content">
+                <!-- Auto generated content -->
+            </div>
+            <div class="mt-8 pt-4 border-t flex justify-end">
+                <button onclick="window.print()" class="bg-slate-800 text-white px-4 py-2 rounded flex items-center">
+                    <i class="fas fa-print mr-2"></i> In báo cáo
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- DATA MANAGEMENT ---
+        let students = JSON.parse(localStorage.getItem('cm_students')) || [
+            { id: 'HS001', name: 'Nguyễn Văn An', dob: '2010-05-15', gender: 'Nam', pname: 'Nguyễn Văn Bình', pphone: '0901234567', group: '1', role: 'Tổ trưởng', points: 100, absentDays: 0 },
+            { id: 'HS002', name: 'Lê Thị Bình', dob: '2010-08-20', gender: 'Nữ', pname: 'Trần Thị Thảo', pphone: '0907654321', group: '1', role: 'Thành viên', points: 95, absentDays: 1 },
+            { id: 'HS003', name: 'Trần Quốc Cường', dob: '2010-01-10', gender: 'Nam', pname: 'Trần Văn Dũng', pphone: '0912345678', group: '2', role: 'Tổ trưởng', points: 110, absentDays: 0 }
+        ];
+
+        let attendanceData = JSON.parse(localStorage.getItem('cm_attendance')) || {};
+        let currentMode = 'parent'; // default
+
+        // --- AUTH & ROLES ---
+        function checkRole() {
+            const params = new URLSearchParams(window.location.search);
+            const role = params.get('role');
+            
+            if (role === 'parent') {
+                setMode('parent');
+            } else {
+                // If no param, check session or default to parent for security
+                setMode('parent');
+            }
+        }
+
+        function setMode(mode) {
+            currentMode = mode;
+            const badge = document.getElementById('roleBadge');
+            const authBtn = document.getElementById('authBtn');
+            const adminElements = document.querySelectorAll('.admin-only');
+
+            if (mode === 'teacher') {
+                badge.innerText = 'CHẾ ĐỘ GIÁO VIÊN';
+                badge.className = 'mt-2 inline-block px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-red-100 text-red-700';
+                authBtn.innerText = 'Thoát Chế độ GV';
+                authBtn.classList.replace('bg-teal-600', 'bg-slate-600');
+                adminElements.forEach(el => el.classList.remove('hidden-mode'));
+            } else {
+                badge.innerText = 'CHẾ ĐỘ PHỤ HUYNH';
+                badge.className = 'mt-2 inline-block px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-blue-100 text-blue-700';
+                authBtn.innerText = 'Đăng nhập Giáo viên';
+                authBtn.classList.replace('bg-slate-600', 'bg-teal-600');
+                adminElements.forEach(el => el.classList.add('hidden-mode'));
+            }
+            renderStudentList();
+            renderDashboard();
+        }
+
+        document.getElementById('authBtn').addEventListener('click', () => {
+            if (currentMode === 'parent') {
+                const pass = prompt('Vui lòng nhập mật khẩu giáo viên (123456):');
+                if (pass === '123456') {
+                    setMode('teacher');
+                } else {
+                    alert('Mật khẩu không đúng!');
+                }
+            } else {
+                setMode('parent');
+            }
+        });
+
+        // --- NAVIGATION ---
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
+            document.getElementById('content-' + tabId).classList.remove('hidden');
+            
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('sidebar-active'));
+            document.getElementById('tab-' + tabId).classList.add('sidebar-active');
+
+            if(tabId === 'dashboard') renderDashboard();
+            if(tabId === 'students') renderStudentList();
+            if(tabId === 'attendance') renderAttendanceList();
+            if(tabId === 'competition') renderCompetitionList();
+        }
+
+        // --- STUDENT MANAGEMENT ---
+        function renderStudentList() {
+            const tbody = document.getElementById('student-table-body');
+            const searchTerm = document.getElementById('searchStudent').value.toLowerCase();
+            const groupFilter = document.getElementById('filterGroup').value;
+
+            tbody.innerHTML = '';
+            
+            const filtered = students.filter(s => {
+                const matchSearch = s.name.toLowerCase().includes(searchTerm) || s.id.toLowerCase().includes(searchTerm);
+                const matchGroup = groupFilter === '' || s.group === groupFilter;
+                return matchSearch && matchGroup;
+            });
+
+            filtered.forEach(s => {
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-slate-50 transition cursor-pointer';
+                tr.onclick = (e) => {
+                    if(!e.target.closest('button')) showPersonalReport(s.id);
+                };
+                tr.innerHTML = `
+                    <td class="px-6 py-4 font-medium text-slate-900">${s.id}</td>
+                    <td class="px-6 py-4">
+                        <div class="font-semibold">${s.name}</div>
+                        <div class="text-xs text-slate-500">${s.gender} | ${s.dob}</div>
+                    </td>
+                    <td class="px-6 py-4"><span class="px-2 py-1 bg-slate-100 rounded text-xs">Tổ ${s.group}</span></td>
+                    <td class="px-6 py-4 text-sm">${s.role === 'Tổ trưởng' ? '<span class="text-orange-600 font-bold"><i class="fas fa-star mr-1"></i>Tổ trưởng</span>' : 'Thành viên'}</td>
+                    <td class="px-6 py-4">
+                        <div class="text-sm">${s.pname}</div>
+                        <div class="text-xs text-slate-500">${s.pphone}</div>
+                    </td>
+                    <td class="px-6 py-4 text-center">
+                        <div class="flex justify-center gap-2 ${currentMode === 'parent' ? 'hidden' : ''}">
+                            <button onclick="editStudent('${s.id}')" class="p-2 text-blue-600 hover:bg-blue-50 rounded"><i class="fas fa-edit"></i></button>
+                            <button onclick="deleteStudent('${s.id}')" class="p-2 text-red-600 hover:bg-red-50 rounded"><i class="fas fa-trash"></i></button>
+                        </div>
+                        <span class="${currentMode === 'teacher' ? 'hidden' : 'text-xs text-blue-600 underline'}">Xem chi tiết</span>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // Student Form Handlers
+        function openStudentModal(id = null) {
+            document.getElementById('studentModal').classList.remove('hidden');
+            if(id) {
+                const s = students.find(x => x.id === id);
+                document.getElementById('modalTitle').innerText = 'Sửa thông tin học sinh';
+                document.getElementById('edit-id').value = s.id;
+                document.getElementById('form-id').value = s.id;
+                document.getElementById('form-name').value = s.name;
+                document.getElementById('form-dob').value = s.dob;
+                document.getElementById('form-gender').value = s.gender;
+                document.getElementById('form-group').value = s.group;
+                document.getElementById('form-role').value = s.role;
+                document.getElementById('form-pname').value = s.pname;
+                document.getElementById('form-pphone').value = s.pphone;
+            } else {
+                document.getElementById('modalTitle').innerText = 'Thêm học sinh mới';
+                document.getElementById('studentForm').reset();
+                document.getElementById('edit-id').value = '';
+            }
+        }
+
+        function closeStudentModal() {
+            document.getElementById('studentModal').classList.add('hidden');
+        }
+
+        document.getElementById('studentForm').onsubmit = (e) => {
+            e.preventDefault();
+            const editId = document.getElementById('edit-id').value;
+            const studentData = {
+                id: document.getElementById('form-id').value,
+                name: document.getElementById('form-name').value,
+                dob: document.getElementById('form-dob').value,
+                gender: document.getElementById('form-gender').value,
+                group: document.getElementById('form-group').value,
+                role: document.getElementById('form-role').value,
+                pname: document.getElementById('form-pname').value,
+                pphone: document.getElementById('form-pphone').value,
+                points: 100,
+                absentDays: 0
+            };
+
+            if(editId) {
+                const index = students.findIndex(s => s.id === editId);
+                students[index] = { ...students[index], ...studentData };
+            } else {
+                students.push(studentData);
+            }
+
+            saveData();
+            closeStudentModal();
+            renderStudentList();
+        };
+
+        function deleteStudent(id) {
+            if(confirm('Bạn có chắc muốn xóa học sinh này?')) {
+                students = students.filter(s => s.id !== id);
+                saveData();
+                renderStudentList();
+            }
+        }
+
+        // --- ATTENDANCE SYSTEM ---
+        function renderAttendanceList() {
+            const today = new Date().toLocaleDateString('vi-VN');
+            document.getElementById('current-date').innerText = today;
+            const container = document.getElementById('attendance-list');
+            container.innerHTML = '';
+
+            students.forEach(s => {
+                const card = document.createElement('div');
+                const status = attendanceData[today]?.[s.id] || 'present';
+                card.className = `p-4 rounded-lg border-2 flex items-center justify-between transition ${status === 'present' ? 'border-green-100 bg-green-50' : 'border-red-100 bg-red-50'}`;
+                card.innerHTML = `
+                    <div>
+                        <div class="font-bold">${s.name}</div>
+                        <div class="text-xs text-slate-500">Tổ ${s.group}</div>
+                    </div>
+                    <select onchange="updateAttendanceState('${s.id}', this.value)" class="px-2 py-1 rounded border text-sm">
+                        <option value="present" ${status === 'present' ? 'selected' : ''}>Hiện diện</option>
+                        <option value="absent" ${status === 'absent' ? 'selected' : ''}>Vắng</option>
+                    </select>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function updateAttendanceState(studentId, value) {
+            const today = new Date().toLocaleDateString('vi-VN');
+            if(!attendanceData[today]) attendanceData[today] = {};
+            attendanceData[today][studentId] = value;
+        }
+
+        function saveAttendance() {
+            const today = new Date().toLocaleDateString('vi-VN');
+            // Cập nhật số ngày nghỉ vào database chính
+            students.forEach(s => {
+                const count = Object.values(attendanceData).filter(day => day[s.id] === 'absent').length;
+                s.absentDays = count;
+            });
+            saveData();
+            alert('Đã lưu điểm danh ngày ' + today);
+            renderDashboard();
+        }
+
+        // --- COMPETITION SYSTEM ---
+        function renderCompetitionList() {
+            const groupId = document.getElementById('comp-group-select').value;
+            const tbody = document.getElementById('competition-table-body');
+            tbody.innerHTML = '';
+
+            const groupMembers = students.filter(s => s.group === groupId);
+            
+            groupMembers.forEach(s => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="px-6 py-4 font-medium">${s.name}</td>
+                    <td class="px-6 py-4"><span class="font-bold text-teal-600">${s.points}</span></td>
+                    <td class="px-6 py-4 text-center">
+                        <div class="flex justify-center gap-1">
+                            <button onclick="updatePoints('${s.id}', 2)" class="px-2 py-1 bg-green-100 text-green-700 rounded text-xs">+2 Phát biểu</button>
+                            <button onclick="updatePoints('${s.id}', 5)" class="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs">+5 Việc tốt</button>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4 text-center">
+                        <div class="flex justify-center gap-1">
+                            <button onclick="updatePoints('${s.id}', -2)" class="px-2 py-1 bg-orange-100 text-orange-700 rounded text-xs">-2 Muộn</button>
+                            <button onclick="updatePoints('${s.id}', -5)" class="px-2 py-1 bg-red-100 text-red-700 rounded text-xs">-5 Ồn ào</button>
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function updatePoints(id, val) {
+            const s = students.find(x => x.id === id);
+            s.points += val;
+            saveData();
+            renderCompetitionList();
+        }
+
+        // --- DASHBOARD & STATISTICS ---
+        function renderDashboard() {
+            // Stats
+            document.getElementById('stat-total-students').innerText = students.length;
+            const today = new Date().toLocaleDateString('vi-VN');
+            const absents = attendanceData[today] ? Object.values(attendanceData[today]).filter(v => v === 'absent').length : 0;
+            document.getElementById('stat-absent-today').innerText = absents;
+
+            // Group Rankings
+            const groupScores = {};
+            [1, 2, 3, 4].forEach(g => {
+                const members = students.filter(s => s.group == g);
+                const total = members.reduce((sum, s) => sum + s.points, 0);
+                groupScores[g] = total;
+            });
+
+            const sortedGroups = Object.entries(groupScores).sort((a, b) => b[1] - a[1]);
+            document.getElementById('stat-top-group').innerText = 'Tổ ' + sortedGroups[0][0];
+
+            const groupList = document.getElementById('group-ranking-list');
+            groupList.innerHTML = '';
+            sortedGroups.forEach(([g, score], index) => {
+                groupList.innerHTML += `
+                    <div class="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+                        <div class="flex items-center gap-3">
+                            <span class="w-6 h-6 flex items-center justify-center rounded-full ${index === 0 ? 'bg-yellow-400 text-white' : 'bg-slate-200 text-slate-600'} text-xs font-bold">${index + 1}</span>
+                            <span class="font-medium text-slate-700">Tổ ${g}</span>
+                        </div>
+                        <span class="font-bold text-teal-600">${score} điểm</span>
+                    </div>
+                `;
+            });
+
+            // Student Rankings
+            const topStudents = [...students].sort((a, b) => b.points - a.points).slice(0, 5);
+            const studentList = document.getElementById('student-ranking-list');
+            studentList.innerHTML = '';
+            topStudents.forEach((s, index) => {
+                studentList.innerHTML += `
+                    <div class="flex items-center justify-between p-3 border-b border-slate-50">
+                        <div class="flex items-center gap-3">
+                            <i class="fas fa-award ${index === 0 ? 'text-yellow-500' : 'text-slate-300'}"></i>
+                            <span class="text-sm font-medium">${s.name}</span>
+                        </div>
+                        <span class="text-xs px-2 py-1 bg-teal-50 text-teal-700 rounded-full font-bold">${s.points}đ</span>
+                    </div>
+                `;
+            });
+        }
+
+        // --- REPORT & AUTO COMMENTS ---
+        function showPersonalReport(id) {
+            const s = students.find(x => x.id === id);
+            const modal = document.getElementById('reportModal');
+            const content = document.getElementById('report-content');
+
+            // Logic nhận xét tự động
+            let reviewHanhKiem = "";
+            let reviewHocTap = "";
+
+            if (s.points >= 110) reviewHanhKiem = "Gương mẫu, tích cực tham gia các hoạt động lớp, có tinh thần trách nhiệm cao.";
+            else if (s.points >= 90) reviewHanhKiem = "Ngoan ngoãn, thực hiện tốt nội quy trường lớp.";
+            else reviewHanhKiem = "Đôi lúc còn vi phạm nội quy, cần rèn luyện thêm ý thức tự giác.";
+
+            if (s.absentDays === 0) reviewHocTap = "Đi học chuyên cần, đảm bảo thời gian lên lớp.";
+            else if (s.absentDays < 3) reviewHocTap = "Đi học khá đầy đủ, cần lưu ý hạn chế nghỉ không lý do.";
+            else reviewHocTap = "Nghỉ học nhiều (${s.absentDays} buổi), gây ảnh hưởng đến việc tiếp thu bài.";
+
+            content.innerHTML = `
+                <div class="text-center mb-8">
+                    <h2 class="text-2xl font-bold text-teal-800 uppercase">Phiếu Đánh giá Cá nhân</h2>
+                    <p class="text-slate-500">Học kỳ I - Năm học 2023-2024</p>
+                </div>
+                <div class="grid grid-cols-2 gap-6 mb-8 text-sm">
+                    <div>
+                        <p><span class="font-bold">Học sinh:</span> ${s.name}</p>
+                        <p><span class="font-bold">Mã HS:</span> ${s.id}</p>
+                        <p><span class="font-bold">Lớp:</span> 9A1 - <span class="font-bold">Tổ:</span> ${s.group}</p>
+                    </div>
+                    <div class="text-right">
+                        <p><span class="font-bold">Phụ huynh:</span> ${s.pname}</p>
+                        <p><span class="font-bold">Số điện thoại:</span> ${s.pphone}</p>
+                        <p><span class="font-bold">Chức vụ:</span> ${s.role}</p>
+                    </div>
+                </div>
+                <div class="space-y-6">
+                    <div class="bg-ceramic p-4 rounded-lg">
+                        <h4 class="font-bold text-teal-700 mb-2 border-b border-teal-200 pb-1">1. Thống kê Thi đua</h4>
+                        <div class="grid grid-cols-2 gap-4 mt-2">
+                            <div class="text-center p-2 bg-white rounded shadow-sm">
+                                <div class="text-xs text-slate-500 uppercase">Điểm tích lũy</div>
+                                <div class="text-xl font-bold text-teal-600">${s.points}</div>
+                            </div>
+                            <div class="text-center p-2 bg-white rounded shadow-sm">
+                                <div class="text-xs text-slate-500 uppercase">Số ngày vắng</div>
+                                <div class="text-xl font-bold text-red-500">${s.absentDays}</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div>
+                        <h4 class="font-bold text-teal-700 mb-2">2. Nhận xét của Giáo viên chủ nhiệm</h4>
+                        <div class="space-y-3 italic text-slate-700 leading-relaxed">
+                            <p><strong class="not-italic text-slate-800">- Rèn luyện:</strong> ${reviewHanhKiem}</p>
+                            <p><strong class="not-italic text-slate-800">- Chuyên cần:</strong> ${reviewHocTap}</p>
+                            <p><strong class="not-italic text-slate-800">- Ghi chú thêm:</strong> Cần duy trì phát huy các thế mạnh và tích cực đóng góp xây dựng tổ ${s.group} vững mạnh hơn.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="mt-12 flex justify-between items-center text-sm">
+                    <div class="text-center">
+                        <p class="font-bold">Phụ huynh ký tên</p>
+                        <div class="h-20"></div>
+                        <p class="text-slate-400">..........................</p>
+                    </div>
+                    <div class="text-center">
+                        <p class="font-bold">Giáo viên chủ nhiệm</p>
+                        <div class="h-20"></div>
+                        <p class="text-slate-800 font-medium">Nguyễn Thị Giáo Viên</p>
+                    </div>
+                </div>
+            `;
+            modal.classList.remove('hidden');
+        }
+
+        function closeReportModal() {
+            document.getElementById('reportModal').classList.add('hidden');
+        }
+
+        // --- UTILS ---
+        function saveData() {
+            localStorage.setItem('cm_students', JSON.stringify(students));
+            localStorage.setItem('cm_attendance', JSON.stringify(attendanceData));
+        }
+
+        // Listeners
+        document.getElementById('searchStudent').oninput = renderStudentList;
+        document.getElementById('filterGroup').onchange = renderStudentList;
+
+        // Init
+        checkRole();
+        switchTab('dashboard');
+    </script>
+</body>
+</html>
